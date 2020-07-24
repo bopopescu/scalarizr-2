@@ -70,12 +70,12 @@ class PostgreSQLAPI(object):
         query_out = psql.execute(self.replication_status_query)
         query_result = self._parse_query_out(query_out)
 
-        is_master = int(__postgresql__[OPT_REPLICATION_MASTER])
+        is_main = int(__postgresql__[OPT_REPLICATION_MASTER])
 
         if not query_result['xlog_delay']:
-            if is_master:
-                return {'master': {'status': 'up'}}
-            return {'slave': {'status': 'down',
+            if is_main:
+                return {'main': {'status': 'up'}}
+            return {'subordinate': {'status': 'down',
                               'error': query_result['error']}}
-        return {'slave': {'status': 'up',
+        return {'subordinate': {'status': 'up',
                           'xlog_delay': query_result['xlog_delay']}}

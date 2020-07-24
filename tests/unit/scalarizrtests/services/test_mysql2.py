@@ -29,7 +29,7 @@ class TestMySQLSnapBackupAndRestore(object):
     def setup(self):
         self.bak = backup.backup(type='snap_mysql')
         mock.patch.object(self.bak, '_client').start()
-        self.bak._client.return_value.master_status.return_value = ('binlog.000003', '107')
+        self.bak._client.return_value.main_status.return_value = ('binlog.000003', '107')
 
         self.rst = backup.restore(type='snap_mysql')
 
@@ -51,7 +51,7 @@ class TestMySQLSnapBackupAndRestore(object):
         self.bak.freeze(mock.Mock(), state)
 
         self.bak._client.return_value.lock_tables.assert_called_with()
-        self.bak._client.return_value.master_status.assert_called_with()
+        self.bak._client.return_value.main_status.assert_called_with()
         assert state == {'log_file': 'binlog.000003', 'log_pos': '107'}
 
 

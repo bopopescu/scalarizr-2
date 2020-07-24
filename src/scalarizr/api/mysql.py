@@ -82,20 +82,20 @@ class MySQLAPI(object):
     def replication_status(self):
         mysql_cli = mysql_svc.MySQLClient(__mysql__['root_user'],
                                           __mysql__['root_password'])
-        if int(__mysql__['replication_master']):
-            master_status = mysql_cli.master_status()
-            result = {'master': {'status': 'up',
-                                 'log_file': master_status[0],
-                                 'log_pos': master_status[1]}}
+        if int(__mysql__['replication_main']):
+            main_status = mysql_cli.main_status()
+            result = {'main': {'status': 'up',
+                                 'log_file': main_status[0],
+                                 'log_pos': main_status[1]}}
             return result
         else:
             try:
-                slave_status = mysql_cli.slave_status()
-                slave_status = dict(zip(map(string.lower, slave_status.keys()),
-                                        slave_status.values()))
-                slave_running = slave_status['slave_io_running'] == 'Yes' and \
-                    slave_status['slave_sql_running'] == 'Yes'
-                slave_status['status'] = 'up' if slave_running else 'down'
-                return {'slave': slave_status}
+                subordinate_status = mysql_cli.subordinate_status()
+                subordinate_status = dict(zip(map(string.lower, subordinate_status.keys()),
+                                        subordinate_status.values()))
+                subordinate_running = subordinate_status['subordinate_io_running'] == 'Yes' and \
+                    subordinate_status['subordinate_sql_running'] == 'Yes'
+                subordinate_status['status'] = 'up' if subordinate_running else 'down'
+                return {'subordinate': subordinate_status}
             except ServiceError:
-                return {'slave': {'status': 'down'}}
+                return {'subordinate': {'status': 'down'}}

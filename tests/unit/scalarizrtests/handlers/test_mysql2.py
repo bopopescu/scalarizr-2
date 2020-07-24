@@ -4,11 +4,11 @@ import mock
 import sys
 
 
-eph_host_init_response_new_master = {
+eph_host_init_response_new_main = {
         'server_index': '1',
         'db_type': 'percona',
         'percona': {
-                'replication_master': 1,
+                'replication_main': 1,
                 'volume_config': {
                         'type': 'eph',
                 },
@@ -21,11 +21,11 @@ eph_host_init_response_new_master = {
         }
 }
 
-eph_host_init_response_respawn_master = {
+eph_host_init_response_respawn_main = {
         'server_index': '1',
         'db_type': 'percona',
         'percona': {
-                'replication_master': 1,
+                'replication_main': 1,
                 'volume_config': {
                         'type': 'eph',
                         'mpoint': '/mnt/dbstorage',
@@ -43,12 +43,12 @@ eph_host_init_response_respawn_master = {
         }
 }
 
-eph_host_init_response_slave = {
+eph_host_init_response_subordinate = {
         'local_ip': '10.146.34.58',
         'remote_ip': '176.34.6.168',
         'db_type': 'percona',
         'percona': {
-                'replication_master': 1,
+                'replication_main': 1,
                 'volume_config': {
                         'type': 'eph',
                         'id': 'eph-vol-2a3bd1c8'
@@ -60,13 +60,13 @@ eph_host_init_response_slave = {
         }
 }
 
-eph_new_master_up = {
+eph_new_main_up = {
         'behaviour': ['percona'],
         'local_ip': '10.146.34.58',
         'remote_ip': '176.34.6.168',
         'db_type': 'percona',
         'percona': {
-                'replication_master': '1',
+                'replication_main': '1',
                 'snapshot_config': {'type': 'eph'},
                 'root_password': 'zcuDiVum9hDvx1v97Ac5',
                 'repl_password': 'cumLityXgnJv5JgaxmXA',
@@ -84,7 +84,7 @@ class NodeMock(dict):
                         behavior=['percona'])
 
     def __setitem__(self, key, value):
-        if key == 'replication_master':
+        if key == 'replication_main':
             value = int(key)
         super(NodeMock, self).__setitem__(key, value)
 
@@ -104,19 +104,19 @@ class NodeMock(dict):
 class TestMysqlHandler(object):
 
 
-    def test_master_new(self, **kwds):
+    def test_main_new(self, **kwds):
         snapshot = mock.MagicMock(
-                        name='master storage snapshot',
+                        name='main storage snapshot',
                         type='eph',
                         id='eph-snap-12345678')
         restore = mock.Mock(
-                        name='master restore',
+                        name='main restore',
                         type='snap_mysql',
                         snapshot=snapshot,
                         log_file='binlog.000003',
                         log_pos='107')
         backup = mock.Mock(
-                        name='master backup',
+                        name='main backup',
                         **{'run.return_value': restore})
         kwds['backup'].configure_mock(return_value=backup)
 
@@ -125,7 +125,7 @@ class TestMysqlHandler(object):
         hdlr = mysql2.MysqlHandler()
         mock.patch.object(hdlr, '_storage_valid', return_value=False)
 
-        hir = mock.Mock(**eph_host_init_response_new_master)
+        hir = mock.Mock(**eph_host_init_response_new_main)
         host_up = mock.Mock()
         hdlr.on_host_init_response(hir)
         hdlr.on_before_host_up(host_up)
@@ -147,7 +147,7 @@ class TestMysqlHandler(object):
         assert host_up.db_type == 'percona'
         assert host_up.percona['log_file'] == restore.log_file
         assert host_up.percona['log_pos'] == restore.log_pos
-        assert int(host_up.percona['replication_master']) == 1
+        assert int(host_up.percona['replication_main']) == 1
         assert host_up.percona['root_password'] == __mysql__['root_password']
         assert host_up.percona['repl_password'] == __mysql__['repl_password']
         assert host_up.percona['stat_password'] == __mysql__['stat_password']
@@ -155,18 +155,18 @@ class TestMysqlHandler(object):
         assert 'snapshot_config' in host_up.percona
 
 
-    def test_master_respawn(self, **kwds):
+    def test_main_respawn(self, **kwds):
         return
         from scalarizr.handlers import mysql2
 
         hdlr = mysql2.MysqlHandler()
         mock.patch.object(hdlr, '_storage_valid', return_value=True)
 
-        hir = mock.Mock(**eph_host_init_response_respawn_master)
+        hir = mock.Mock(**eph_host_init_response_respawn_main)
         hdlr.on_host_init_response(hir)
 
         __mysql__ = mysql2.__mysql__
-        assert (__mysql__['replication_master']) == 1
+        assert (__mysql__['replication_main']) == 1
         assert __mysql__['restore']
         kwds['restore'].assert_called_with(
                         type='snap_mysql',
@@ -181,7 +181,7 @@ class TestMysqlHandler(object):
         assert host_up.db_type == 'percona'
         assert host_up.percona['log_file']
         assert host_up.percona['log_pos']
-        assert int(host_up.percona['replication_master']) == 1
+        assert int(host_up.percona['replication_main']) == 1
         assert host_up.percona['root_password'] == __mysql__['root_password']
         assert host_up.percona['repl_password'] == __mysql__['repl_password']
         assert host_up.percona['stat_password'] == __mysql__['stat_password']
@@ -189,11 +189,11 @@ class TestMysqlHandler(object):
         assert 'snapshot_config' in host_up.percona
 
 
-    def test_master_respawn_from_snapshot(self, **kwds):
+    def test_main_respawn_from_snapshot(self, **kwds):
         pass
 
 
-    def test_slave(self, **kwds):
+    def test_subordinate(self, **kwds):
         pass
 
 
@@ -205,19 +205,19 @@ class TestMysqlHandler(object):
         pass
 
 
-    def test_slave_to_master(self, **kwds):
+    def test_subordinate_to_main(self, **kwds):
         pass
 
 
-    def test_new_master_up(self, **kwds):
+    def test_new_main_up(self, **kwds):
         pass
 
 
 class TestMysqlHandlerXtrabackup(object):
-    def test_master_new(self):
+    def test_main_new(self):
         pass
 
-    def test_master_respawn(self):
+    def test_main_respawn(self):
         pass
 
 

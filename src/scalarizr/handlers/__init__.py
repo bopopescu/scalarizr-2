@@ -680,7 +680,7 @@ class DbMsrMessages:
     @ivar: status: Operation status [ ok | error ]
     @ivar: last_error: errmsg if status = error
     @ivar: snapshot_config: snapshot configuration
-    @ivar: current_xlog_location:  pg_current_xlog_location() on master after snap was created
+    @ivar: current_xlog_location:  pg_current_xlog_location() on main after snap was created
     '''
 
     DBMSR_CREATE_BACKUP = "DbMsr_CreateBackup"
@@ -694,28 +694,28 @@ class DbMsrMessages:
     @ivar: backup_parts: URL List (s3, cloudfiles)
     '''
 
-    DBMSR_PROMOTE_TO_MASTER = "DbMsr_PromoteToMaster"
+    DBMSR_PROMOTE_TO_MASTER = "DbMsr_PromoteToMain"
 
-    DBMSR_PROMOTE_TO_MASTER_RESULT = "DbMsr_PromoteToMasterResult"
+    DBMSR_PROMOTE_TO_MASTER_RESULT = "DbMsr_PromoteToMainResult"
     '''
     @ivar: db_type: postgresql|mysql
     @ivar: status: ok|error
     @ivar: last_error: errmsg if status=error
     @ivar: volume_config: volume configuration
     @ivar: snapshot_config?: snapshot configuration
-    @ivar: current_xlog_location_?:  pg_current_xlog_location() on master after snap was created
+    @ivar: current_xlog_location_?:  pg_current_xlog_location() on main after snap was created
     '''
 
-    DBMSR_NEW_MASTER_UP = "DbMsr_NewMasterUp"
+    DBMSR_NEW_MASTER_UP = "DbMsr_NewMainUp"
     '''
     @ivar: db_type:  postgresql|mysql
     @ivar: local_ip
     @ivar: remote_ip
     @ivar: snapshot_config
-    @ivar: current_xlog_location:  pg_current_xlog_location() on master after snap was created
+    @ivar: current_xlog_location:  pg_current_xlog_location() on main after snap was created
     '''
 
-    DBMSR_NEW_MASTER_UP_RESULT = "DbMsr_NewMasterUpResult"
+    DBMSR_NEW_MASTER_UP_RESULT = "DbMsr_NewMainUpResult"
 
     """
     Also Postgresql behaviour adds params to common messages:
@@ -723,27 +723,27 @@ class DbMsrMessages:
     = HOST_INIT_RESPONSE =
     @ivar db_type: postgresql|mysql
     @ivar postgresql=dict(
-            replication_master:      1|0
+            replication_main:      1|0
             root_user
-            root_password:                   'scalr' user password                                          (on slave)
+            root_password:                   'scalr' user password                                          (on subordinate)
             root_ssh_private_key
             root_ssh_public_key
             current_xlog_location
-            volume_config:                  Master storage configuration                    (on master)
-            snapshot_config:                Master storage snapshot                                 (both)
+            volume_config:                  Main storage configuration                    (on main)
+            snapshot_config:                Main storage snapshot                                 (both)
     )
 
     = HOST_UP =
     @ivar db_type: postgresql|mysql
     @ivar postgresql=dict(
-            replication_master: 1|0
+            replication_main: 1|0
             root_user
-            root_password:                  'scalr' user password                                   (on master)
+            root_password:                  'scalr' user password                                   (on main)
             root_ssh_private_key
             root_ssh_public_key
             current_xlog_location
             volume_config:                  Current storage configuration                   (both)
-            snapshot_config:                Master storage snapshot                                 (on master)
+            snapshot_config:                Main storage snapshot                                 (on main)
     )
     """
 
@@ -895,7 +895,7 @@ def prepare_tags(handler=None, **kwargs):
     if kwargs:
         # example: tmp = 1
         if 'db_replication_role' in kwargs and type(kwargs['db_replication_role']) == bool:
-            kwargs['db_replication_role'] = 'master' if kwargs['db_replication_role'] else 'slave'
+            kwargs['db_replication_role'] = 'main' if kwargs['db_replication_role'] else 'subordinate'
         tags.update(kwargs)
 
     excludes = []

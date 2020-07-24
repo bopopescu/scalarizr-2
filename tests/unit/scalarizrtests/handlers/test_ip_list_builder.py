@@ -20,13 +20,13 @@ class _QueryEnv:
                 name = "mysql-lvm",
                 hosts = [_Bunch(
                         index='1',
-                        replication_master=True,
+                        replication_main=True,
                         internal_ip="127.0.0.1",
                         external_ip="192.168.1.92"
                         ),
                         _Bunch(
                         index='2',
-                        replication_master=False,
+                        replication_main=False,
                         internal_ip="127.0.0.2",
                         external_ip="192.168.1.93"
                         )
@@ -47,9 +47,9 @@ class TestIpListBuilder(unittest.TestCase):
 
         self.ip_lb = ip_list_builder.IpListBuilder()
 
-    def test_host_is_replication_master(self):
-        is_replication_master = self.ip_lb._host_is_replication_master('127.0.0.1', 'mysql-lvm')
-        self.assertTrue(is_replication_master)
+    def test_host_is_replication_main(self):
+        is_replication_main = self.ip_lb._host_is_replication_main('127.0.0.1', 'mysql-lvm')
+        self.assertTrue(is_replication_main)
 
     def _on_HostUpDown(self,internal_ip, prefix):
         role_alias = 'mysql'
@@ -72,11 +72,11 @@ class TestIpListBuilder(unittest.TestCase):
         self.assertFalse(os.path.exists(mysql_file))
 
     def test_on_HostUpDown1(self):
-        self._on_HostUpDown(internal_ip = '127.0.0.1', prefix = "-master")
+        self._on_HostUpDown(internal_ip = '127.0.0.1', prefix = "-main")
 
 
     def test_on_HostUpDown2(self):
-        self._on_HostUpDown(internal_ip = '127.0.0.2', prefix = "-slave")
+        self._on_HostUpDown(internal_ip = '127.0.0.2', prefix = "-subordinate")
 
 if __name__ == "__main__":
     unittest.main()

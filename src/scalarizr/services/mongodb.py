@@ -137,9 +137,9 @@ class MongoDB(BaseService):
 
 
     @property
-    def is_replication_master(self):
-        res = self.cli.is_master()['ismaster']
-        self._logger.debug("Replication master: %s", res)
+    def is_replication_main(self):
+        res = self.cli.is_main()['ismain']
+        self._logger.debug("Replication main: %s", res)
         return res
 
 
@@ -200,9 +200,9 @@ class MongoDB(BaseService):
         @return (host:port)
         '''
         self.cli.initiate_rs()
-        wait_until(lambda: self.is_replication_master, sleep=5, logger=self._logger,
+        wait_until(lambda: self.is_replication_main, sleep=5, logger=self._logger,
                                 timeout=120, start_text='Wait until node becomes replication primary')          
-        self._logger.debug('Server became replication master')
+        self._logger.debug('Server became replication main')
 
 
     def start_shardsvr(self):
@@ -270,7 +270,7 @@ class MongoDB(BaseService):
                 self.default_init_script.stop('Stopping default mongod service')
                 
                         
-    def register_slave(self, ip, port=None):
+    def register_subordinate(self, ip, port=None):
         ret = self.cli.add_replica(ip, port)
         if ret['ok'] == '0':
             self._logger.error('Could not add replica %s to set: %s' % (ip, ret['errmsg']))
@@ -282,8 +282,8 @@ class MongoDB(BaseService):
             self._logger.error('Could not add arbiter %s to set: %s' % (ip, ret['errmsg']))
             
             
-    def unregister_slave(self,ip,port=None):
-        ret = self.cli.remove_slave(ip, port)
+    def unregister_subordinate(self,ip,port=None):
+        ret = self.cli.remove_subordinate(ip, port)
         if ret['ok'] == '0':
             self._logger.error('Could not remove replica %s from set: %s' % (ip, ret['errmsg']))
 
@@ -326,7 +326,7 @@ class MongoDB(BaseService):
     @property
     def replicas(self):
         self._logger.debug('Querying list of replicas')
-        ret = self.cli.is_master()
+        ret = self.cli.is_main()
         rep_list = ret['hosts'] if 'hosts' in ret else []
         self._logger.debug('Current replicas are %s' % rep_list) 
         return rep_list
@@ -335,7 +335,7 @@ class MongoDB(BaseService):
     @property
     def arbiters(self):
         self._logger.debug('Querying list of arbiters')
-        ret = self.cli.is_master()
+        ret = self.cli.is_main()
         arbiter_list = ret['arbiters'] if 'arbiters' in ret else []
         self._logger.debug('Current arbiters are %s' % arbiter_list) 
         return arbiter_list
@@ -343,7 +343,7 @@ class MongoDB(BaseService):
     @property
     def primary_host(self):
         self._logger.debug('Getting current primary host')
-        ret = self.cli.is_master()
+        ret = self.cli.is_main()
         return ret['primary'] if 'primary' in ret else None
 
 
@@ -984,9 +984,9 @@ class MongoCLI(object):
 
 
     @autoreconnect
-    def is_master(self):
-        self._logger.debug('Checking if node is master')
-        return self.connection.admin.command('isMaster')
+    def is_main(self):
+        self._logger.debug('Checking if node is main')
+        return self.connection.admin.command('isMain')
 
 
     @autoreconnect
@@ -1023,7 +1023,7 @@ class MongoCLI(object):
         return self.add_replica(ip, port, arbiter=True)
 
 
-    def remove_slave(self, ip, port=None):
+    def remove_subordinate(self, ip, port=None):
         port = port or REPLICA_DEFAULT_PORT
         host_to_del = "%s:%s" % (ip, port)
                         

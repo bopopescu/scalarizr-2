@@ -45,12 +45,12 @@ class Test(unittest.TestCase):
                 return [_Bunch(
                                 behaviour = "cassandra",
                                 name = "cassandra-node-1",
-                                hosts = [_Bunch(index='1',replication_master="1",internal_ip="192.168.1.93",external_ip="8.8.8.8")]
+                                hosts = [_Bunch(index='1',replication_main="1",internal_ip="192.168.1.93",external_ip="8.8.8.8")]
                                 ),
                                 _Bunch(
                                 behaviour = "cassandra",
                                 name = "cassandra-node-2",
-                                hosts = [_Bunch(index='2',replication_master="0",internal_ip=None,external_ip="8.8.8.9")]
+                                hosts = [_Bunch(index='2',replication_main="0",internal_ip=None,external_ip="8.8.8.9")]
                                 )]
         class _Message:
             def __init__(self):

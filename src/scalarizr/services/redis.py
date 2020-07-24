@@ -40,7 +40,7 @@ CONFIG_DIR = UBUNTU_CONFIG_DIR if disttool.is_ubuntu() else CENTOS_CONFIG_DIR
 DEFAULT_CONF_PATH = os.path.join(CONFIG_DIR, 'redis.conf')
 
 
-OPT_REPLICATION_MASTER  = "replication_master"
+OPT_REPLICATION_MASTER  = "replication_main"
 
 REDIS_CLI_PATH = '/usr/bin/redis-cli'
 DEFAULT_DIR_PATH = '/var/lib/redis'
@@ -216,11 +216,11 @@ class RedisInstances(object):
     __metaclass__ = Singleton
 
     instances = None
-    master = None
+    main = None
     persistence_type = None
 
-    def __init__(self, master=False, persistence_type=SNAP_TYPE, use_passwords=True):
-        self.master = master
+    def __init__(self, main=False, persistence_type=SNAP_TYPE, use_passwords=True):
+        self.main = main
         self.persistence_type = persistence_type
         self.use_passwords = use_passwords
         self.instances = []
@@ -293,7 +293,7 @@ class RedisInstances(object):
         for port,password in creds.items():
             if port not in self.ports:
                 create_redis_conf_copy(port)
-                redis_process = Redis(self.master, self.persistence_type, port, password)
+                redis_process = Redis(self.main, self.persistence_type, port, password)
                 self.instances.append(redis_process)
         LOG.debug('Total of redis processes: %d' % len(self.instances))
 
@@ -333,23 +333,23 @@ class RedisInstances(object):
                 redis.redis_cli.save()
 
 
-    def init_as_masters(self, mpoint):
+    def init_as_mains(self, mpoint):
         passwords = []
         ports = []
         for redis in self.instances:
-            redis.init_master(mpoint)
+            redis.init_main(mpoint)
             passwords.append(redis.password)
             ports.append(redis.port)
         return (ports, passwords)
 
 
-    def init_as_slaves(self, mpoint, primary_ip):
+    def init_as_subordinates(self, mpoint, primary_ip):
         passwords = []
         ports = []
         for redis in self.instances:
             passwords.append(redis.password)
             ports.append(redis.port)
-            redis.init_slave(mpoint, primary_ip, redis.port)
+            redis.init_subordinate(mpoint, primary_ip, redis.port)
         return (ports, passwords)
 
 
@@ -365,53 +365,53 @@ class Redis(BaseService):
     port = None
     password = None
 
-    def __init__(self, master=False, persistence_type=SNAP_TYPE, port=DEFAULT_PORT, password=None):
+    def __init__(self, main=False, persistence_type=SNAP_TYPE, port=DEFAULT_PORT, password=None):
         self._objects = {}
-        self.is_replication_master = master
+        self.is_replication_main = main
         self.persistence_type = persistence_type
         self.port = port
         self.password = password
 
 
-    def init_master(self, mpoint):
-        self.service.stop('Configuring master. Moving Redis db files')
+    def init_main(self, mpoint):
+        self.service.stop('Configuring main. Moving Redis db files')
         self.init_service(mpoint)
-        self.redis_conf.masterauth = None
-        self.redis_conf.slaveof = None
+        self.redis_conf.mainauth = None
+        self.redis_conf.subordinateof = None
         self.service.start()
-        self.is_replication_master = True
+        self.is_replication_main = True
         return self.current_password
 
 
-    def init_slave(self, mpoint, primary_ip, primary_port):
-        self.service.stop('Configuring slave')
+    def init_subordinate(self, mpoint, primary_ip, primary_port):
+        self.service.stop('Configuring subordinate')
         self.init_service(mpoint)
         self.change_primary(primary_ip, primary_port)
         self.service.start()
-        self.is_replication_master = False
+        self.is_replication_main = False
         return self.current_password
 
 
     def wait_for_sync(self,link_timeout=None,sync_timeout=None):
-        LOG.info('Waiting for link with master')
-        wait_until(lambda: self.redis_cli.master_link_status == 'up', sleep=3, timeout=link_timeout)
-        LOG.info('Waiting for sync with master to complete')
-        wait_until(lambda: not self.redis_cli.master_sync_in_progress, sleep=10, timeout=sync_timeout)
-        LOG.info('Sync with master completed')
+        LOG.info('Waiting for link with main')
+        wait_until(lambda: self.redis_cli.main_link_status == 'up', sleep=3, timeout=link_timeout)
+        LOG.info('Waiting for sync with main to complete')
+        wait_until(lambda: not self.redis_cli.main_sync_in_progress, sleep=10, timeout=sync_timeout)
+        LOG.info('Sync with main completed')
 
 
     def change_primary(self, primary_ip, primary_port):
         '''
-        Currently redis slaves cannot use existing data to catch master
+        Currently redis subordinates cannot use existing data to catch main
         Instead they create another db file while performing full sync
         Wchich may potentially cause free space problem on redis storage
         And broke whole initializing process.
-        So scalarizr removing all existing data on initializing slave
+        So scalarizr removing all existing data on initializing subordinate
         to free as much storage space as possible.
         '''
         self.working_directory.empty()
-        self.redis_conf.masterauth = self.password
-        self.redis_conf.slaveof = (primary_ip, primary_port)
+        self.redis_conf.mainauth = self.password
+        self.redis_conf.subordinateof = (primary_ip, primary_port)
 
 
     def init_service(self, mpoint):
@@ -639,23 +639,23 @@ class RedisConf(BaseRedisConfig):
         self.set_sequential_option('bind', list_ips)
 
 
-    def _get_slaveof(self):
-        return self.get_sequential_option('slaveof')
+    def _get_subordinateof(self):
+        return self.get_sequential_option('subordinateof')
 
 
-    def _set_slaveof(self, conn_data):
+    def _set_subordinateof(self, conn_data):
         '''
         @tuple conndata: (ip,) or (ip, port)
         '''
-        self.set_sequential_option('slaveof', conn_data)
+        self.set_sequential_option('subordinateof', conn_data)
 
 
-    def _get_masterauth(self):
-        return self.get('masterauth')
+    def _get_mainauth(self):
+        return self.get('mainauth')
 
 
-    def _set_masterauth(self, passwd):
-        self.set('masterauth', passwd)
+    def _set_mainauth(self, passwd):
+        self.set('mainauth', passwd)
 
 
     def _get_requirepass(self):
@@ -739,8 +739,8 @@ class RedisConf(BaseRedisConfig):
     dir = property(_get_dir, _set_dir)
     save = property(_get_save, _set_save)
     bind = property(_get_bind, _set_bind)
-    slaveof = property(_get_slaveof, _set_slaveof)
-    masterauth = property(_get_masterauth, _set_masterauth)
+    subordinateof = property(_get_subordinateof, _set_subordinateof)
+    mainauth = property(_get_mainauth, _set_mainauth)
     requirepass = property(_get_requirepass, _set_requirepass)
     appendonly = property(_get_appendonly, _set_appendonly)
     dbfilename = property(_get_dbfilename, _set_dbfilename)
@@ -852,8 +852,8 @@ class RedisCLI(object):
 
 
     @property
-    def connected_slaves(self):
-        return int(self.info['connected_slaves'])
+    def connected_subordinates(self):
+        return int(self.info['connected_subordinates'])
 
 
     @property
@@ -872,26 +872,26 @@ class RedisCLI(object):
 
 
     @property
-    def master_host(self):
+    def main_host(self):
         info = self.info
-        if info['role']=='slave':
-            return info['master_host']
+        if info['role']=='subordinate':
+            return info['main_host']
         return None
 
 
     @property
-    def master_port(self):
+    def main_port(self):
         info = self.info
-        if info['role']=='slave':
-            return int(info['master_port'])
+        if info['role']=='subordinate':
+            return int(info['main_port'])
         return None
 
 
     @property
-    def master_link_status(self):
+    def main_link_status(self):
         info = self.info
-        if info['role']=='slave':
-            return info['master_link_status']
+        if info['role']=='subordinate':
+            return info['main_link_status']
         return None
 
 
@@ -915,18 +915,18 @@ class RedisCLI(object):
 
 
     @property
-    def master_last_io_seconds_ago(self):
+    def main_last_io_seconds_ago(self):
         info = self.info
-        if info['role']=='slave':
-            return int(info['master_last_io_seconds_ago'])
+        if info['role']=='subordinate':
+            return int(info['main_last_io_seconds_ago'])
         return None
 
 
     @property
-    def master_sync_in_progress(self):
+    def main_sync_in_progress(self):
         info = self.info
-        if info['role']=='slave':
-            return True if info['master_sync_in_progress']=='1' else False
+        if info['role']=='subordinate':
+            return True if info['main_sync_in_progress']=='1' else False
         return False
 
 

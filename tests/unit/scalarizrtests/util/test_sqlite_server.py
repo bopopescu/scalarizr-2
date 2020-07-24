@@ -122,7 +122,7 @@ INSERT INTO test_clients_update VALUES (1, 'Mr. First', 36);
             cur = CONN.cursor()
             cur.close()
             # XXX: This wasn't works. method silently dies by timeout
-            assert_raises(Exception, cur.execute, 'SELECT * FROM sqlite_master')
+            assert_raises(Exception, cur.execute, 'SELECT * FROM sqlite_main')
     '''
 
 

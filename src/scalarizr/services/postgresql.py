@@ -44,7 +44,7 @@ STORAGE_DATA_DIR = "data"
 TRIGGER_NAME = "trigger"
 PRESET_FNAME = 'postgresql.conf'
 OPT_PG_VERSION = 'pg_version'
-OPT_REPLICATION_MASTER = "replication_master"
+OPT_REPLICATION_MASTER = "replication_main"
 
 LOG = logging.getLogger(__name__)
 __postgresql__ = __node__[SERVICE_NAME]
@@ -139,20 +139,20 @@ class PostgreSql(BaseService):
         return '/etc/postgresql/%s/main' % self.version if float(self.version) else '9.0'                   
 
     
-    def init_master(self, mpoint, password, slaves=None):
+    def init_main(self, mpoint, password, subordinates=None):
         self._init_service(mpoint, password)
         self.postgresql_conf.hot_standby = 'off'
 
         self.create_pg_role(ROOT_USER, password, super=True)
                     
-        if slaves:
-            LOG.debug('Registering slave hosts: %s' % ' '.join(slaves))
-            for host in slaves:
-                self.register_slave(host, force_restart=False)
+        if subordinates:
+            LOG.debug('Registering subordinate hosts: %s' % ' '.join(subordinates))
+            for host in subordinates:
+                self.register_subordinate(host, force_restart=False)
         self.service.start()
         
         
-    def init_slave(self, mpoint, primary_ip, primary_port, password):
+    def init_subordinate(self, mpoint, primary_ip, primary_port, password):
         self._init_service(mpoint, password)
         
         self.root_user.apply_public_ssh_key() 
@@ -166,11 +166,11 @@ class PostgreSql(BaseService):
         self.service.start()
         
         
-    def register_slave(self, slave_ip, force_restart=True):
-        self.pg_hba_conf.add_standby_host(slave_ip, self.root_user.name)
+    def register_subordinate(self, subordinate_ip, force_restart=True):
+        self.pg_hba_conf.add_standby_host(subordinate_ip, self.root_user.name)
         self.postgresql_conf.max_wal_senders += 1
         if force_restart:
-            self.service.reload(reason='Registering slave', force=True)
+            self.service.reload(reason='Registering subordinate', force=True)
             
             
     def register_client(self, ip, force=True):
@@ -182,9 +182,9 @@ class PostgreSql(BaseService):
         self.recovery_conf.primary_conninfo = (primary_ip, primary_port, username)
     
     
-    def unregister_slave(self, slave_ip):
-        self.pg_hba_conf.delete_standby_host(slave_ip, self.root_user.name)
-        self.service.reload(reason='Unregistering slave', force=True)
+    def unregister_subordinate(self, subordinate_ip):
+        self.pg_hba_conf.delete_standby_host(subordinate_ip, self.root_user.name)
+        self.service.reload(reason='Unregistering subordinate', force=True)
         
     def unregister_client(self, ip):
         self.pg_hba_conf.delete_client(ip)
@@ -633,7 +633,7 @@ class ClusterDir(object):
         return new_cluster_dir
     
     def clean(self):
-        fnames = ('recovery.conf','recovery.done','postmaster.pid')
+        fnames = ('recovery.conf','recovery.done','postmain.pid')
         for fname in fnames:
             exclude = os.path.join(self.path, fname)
             if os.path.exists(exclude):
@@ -696,7 +696,7 @@ class ConfigDir(object):
         
         LOG.debug("configuring pid")
         conf = PostgresqlConf.find(self)
-        conf.pid_file = os.path.join(dst, 'postmaster.pid')
+        conf.pid_file = os.path.join(dst, 'postmain.pid')
 
 
     def _patch_sysconfig(self, config_dir):
@@ -1050,7 +1050,7 @@ class ParseError(BaseException):
         
 def make_symlinks(source_dir, dst_dir, username='postgres'):
     #Vital hack for getting CentOS init script to work
-    for obj in ['base', 'PG_VERSION', 'postmaster.pid']:
+    for obj in ['base', 'PG_VERSION', 'postmain.pid']:
         
         src = os.path.join(source_dir, obj)
         dst = os.path.join(dst_dir, obj) 

@@ -12,9 +12,9 @@ class TestCompound(object):
         store.__len__.return_value = 1
         store.__getitem__.return_value = 'aaa'
 
-        master = node.Compound({'plain_key': store})
+        main = node.Compound({'plain_key': store})
 
-        assert master['plain_key'] == 'aaa'
+        assert main['plain_key'] == 'aaa'
         store.__getitem__.assert_called_with('plain_key')
 
 
@@ -24,12 +24,12 @@ class TestCompound(object):
                 'stat_password': 'ppp'
         }
 
-        master = node.Compound({'*_password': store})
+        main = node.Compound({'*_password': store})
 
-        assert master['root_password'] == 'qqq'
-        assert master['stat_password'] == 'ppp'
+        assert main['root_password'] == 'qqq'
+        assert main['stat_password'] == 'ppp'
         try:
-            master['undefined_password']
+            main['undefined_password']
             assert 0, 'Expected KeyError'
         except KeyError:
             pass
@@ -46,17 +46,17 @@ class TestCompound(object):
         store.__len__.return_value = len(values)
         store.__getitem__.side_effect = getitem
 
-        master = node.Compound({'server_id,platform': store})
+        main = node.Compound({'server_id,platform': store})
 
-        assert master['server_id'] == '14593'
-        assert master['platform'] == 'ec2'
+        assert main['server_id'] == '14593'
+        assert main['platform'] == 'ec2'
 
 
     def test_set_undefined_key(self):
-        master = node.Compound()
+        main = node.Compound()
 
-        master['key1'] = 'ooo'
-        assert master['key1'] == 'ooo'
+        main['key1'] = 'ooo'
+        assert main['key1'] == 'ooo'
 
 
     def test_update(self):
@@ -64,11 +64,11 @@ class TestCompound(object):
                 'behavior': 'percona'
         })
         mysql.update({
-                'replication_master': '1'
+                'replication_main': '1'
         })
 
-        assert 'replication_master' in mysql
-        assert mysql['replication_master'] == '1'
+        assert 'replication_main' in mysql
+        assert mysql['replication_main'] == '1'
 
 
 class TestJson(object):

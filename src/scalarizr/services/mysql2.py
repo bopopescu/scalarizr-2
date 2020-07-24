@@ -47,8 +47,8 @@ __mysql__.update({
     'debian.cnf': '/etc/mysql/debian.cnf',
     'my.cnf': '/etc/my.cnf' if linux.os['family'] in ('RedHat', 'Oracle') else '/etc/mysql/my.cnf',
     'mysqldump_chunk_size': 200,
-    'stop_slave_timeout': 180,
-    'change_master_timeout': 60,
+    'stop_subordinate_timeout': 180,
+    'change_main_timeout': 60,
     'defaults': {
         'datadir': '/var/lib/mysql',
         'log_bin': 'mysql_bin'
@@ -136,12 +136,12 @@ class MySQLSnapBackup(backup.SnapBackup):
         client = self._client()
         client.lock_tables()
         coreutils.sync()
-        if int(__mysql__['replication_master']):
-            (log_file, log_pos) = client.master_status()
+        if int(__mysql__['replication_main']):
+            (log_file, log_pos) = client.main_status()
         else:
-            slave_status = client.slave_status()
-            log_pos = slave_status['Exec_Master_Log_Pos']
-            log_file = slave_status['Master_Log_File']
+            subordinate_status = client.subordinate_status()
+            log_pos = subordinate_status['Exec_Main_Log_Pos']
+            log_file = subordinate_status['Main_Log_File']
 
         upd = {'log_file': log_file, 'log_pos': log_pos}
         state.update(upd)
@@ -208,8 +208,8 @@ class XtrabackupStreamBackup(XtrabackupMixin, backup.Backup):
                             "\(for incremental\): '(\d+:\d+)'")
         self._re_binlog = re.compile(r"innobackupex: MySQL binlog position: " \
                             "filename '([^']+)', position (\d+)")
-        self._re_slave_binlog = re.compile(r"innobackupex: MySQL slave binlog position: " \
-                            "master host '[^']+', filename '([^']+)', position (\d+)")
+        self._re_subordinate_binlog = re.compile(r"innobackupex: MySQL subordinate binlog position: " \
+                            "main host '[^']+', filename '([^']+)', position (\d+)")
         self._re_lsn_innodb_stat = re.compile(r"Log sequence number \d+ (\d+)")
 
         self._killed = False
@@ -230,9 +230,9 @@ class XtrabackupStreamBackup(XtrabackupMixin, backup.Backup):
         }
         if self.no_lock:
             kwds['no_lock'] = True
-        if not int(__mysql__['replication_master']):
-            kwds['safe_slave_backup'] = True
-            kwds['slave_info'] = True
+        if not int(__mysql__['replication_main']):
+            kwds['safe_subordinate_backup'] = True
+            kwds['subordinate_info'] = True
 
         current_lsn = None
         if self.backup_type == 'auto':
@@ -288,8 +288,8 @@ class XtrabackupStreamBackup(XtrabackupMixin, backup.Backup):
 
         log_file = log_pos = to_lsn = None
         re_binlog = self._re_binlog \
-                    if int(__mysql__['replication_master']) else \
-                    self._re_slave_binlog
+                    if int(__mysql__['replication_main']) else \
+                    self._re_subordinate_binlog
         for line in stderr.splitlines():
             m = self._re_lsn.search(line) or self._re_lsn_51.search(line)
             if m:
@@ -338,12 +338,12 @@ class XtrabackupStreamBackup(XtrabackupMixin, backup.Backup):
         LOG.debug("Killing process tree of pid %s" % self._xbak.pid)
         eradicate(self._xbak)
 
-        # sql-slave not running? run
-        if not int(__mysql__['replication_master']):
+        # sql-subordinate not running? run
+        if not int(__mysql__['replication_main']):
             try:
-                self._client().start_slave_io_thread()
+                self._client().start_subordinate_io_thread()
             except:
-                LOG.warning('Cannot start slave io thread', exc_info=sys.exc_info())
+                LOG.warning('Cannot start subordinate io thread', exc_info=sys.exc_info())
 
 
 class XtrabackupStreamRestore(XtrabackupMixin, backup.Restore):
@@ -433,10 +433,10 @@ class XtrabackupStreamRestore(XtrabackupMixin, backup.Restore):
         coreutils.chown_r(__mysql__['data_dir'], 'mysql', 'mysql')
 
         self._mysql_init.start()
-        if int(__mysql__['replication_master']):
-            LOG.info("Master will reset it's binary logs, "
+        if int(__mysql__['replication_main']):
+            LOG.info("Main will reset it's binary logs, "
                     "so updating binary log position in backup manifest")
-            log_file, log_pos = self._client().master_status()
+            log_file, log_pos = self._client().main_status()
             meta = mnf.meta
             meta.update({'log_file': log_file, 'log_pos': log_pos})
             mnf.meta = meta
@@ -466,7 +466,7 @@ class MySQLDumpBackup(backup.Backup):
                 chunk_size=chunk_size or __mysql__['mysqldump_chunk_size'],
                 **kwds)
         self.features.update({
-            'start_slave': False
+            'start_subordinate': False
         })
         self.transfer = None
         self._popens = []

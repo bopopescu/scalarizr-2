@@ -34,7 +34,7 @@ class _MysqlHandler(mysql.MysqlHandler):
         self._messages.append(message)
     def _create_ebs_snapshot(self):
         pass
-    def _take_master_volume(self, volume_id, ec2_conn=None):
+    def _take_main_volume(self, volume_id, ec2_conn=None):
         return _Volume()
 
 LOCAL_IP = '12.34.56.78'
@@ -116,7 +116,7 @@ class Test(unittest.TestCase):
         self.assertEqual(log_file, true_log_file)
         self.assertEqual(log_pos, true_log_pos)
         file = open('/etc/mysql/farm-replication.cnf')
-        self.assertEqual('[mysqld]\nserver-id\t\t=\t1\nmaster-connect-retry\t\t=\t15\n', file.read())
+        self.assertEqual('[mysqld]\nserver-id\t\t=\t1\nmain-connect-retry\t\t=\t15\n', file.read())
         file.close()
 
 
@@ -141,7 +141,7 @@ class Test(unittest.TestCase):
         self.assertEqual(datadir, '/mnt/dbstorage/mysql-data/')
         self.assertEqual(log_bin, '/mnt/dbstorage/mysql-misc/binlog.log')
 
-    def test_on_mysql_newmaster_up(self):
+    def test_on_mysql_newmain_up(self):
         bus.queryenv_service = _QueryEnv()
         bus.platform = _Platform()
         config = bus.config
@@ -178,26 +178,26 @@ class Test(unittest.TestCase):
         myclient.expect('mysql>')
         # retrieve log file and position
         try:
-            master_status = myclient.before.split('\r\n')[4].split('|')
+            main_status = myclient.before.split('\r\n')[4].split('|')
         except:
-            raise BaseException("Cannot get master status")
+            raise BaseException("Cannot get main status")
         finally:
             myclient.sendline('UNLOCK TABLES;')
             os.kill(myd.pid, signal.SIGTERM)
         myd = Popen([daemon, '--defaults-file=/etc/mysql2/my.cnf'], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         ping_service(LOCAL_IP, 3306, 5)
-        message.log_file = master_status[1].strip()
-        message.log_pos = master_status[2].strip()
+        message.log_file = main_status[1].strip()
+        message.log_pos = main_status[2].strip()
         message.repl_user = mysql.REPL_USER
         message.repl_password = repl_password
         message.root_password = root_pass
-        handler.on_Mysql_NewMasterUp(message)
+        handler.on_Mysql_NewMainUp(message)
         os.kill(myd.pid, signal.SIGTERM)
         initd.stop("mysql")
         system ('rm -rf /var/lib/mysql && cp -pr /var/lib/backmysql /var/lib/mysql && rm -rf /var/lib/backmysql')
         config.set(sect_name, mysql.OPT_REPLICATION_MASTER, '1')
 
-    def test_on_before_host_up_slave_ebs(self):
+    def test_on_before_host_up_subordinate_ebs(self):
         bus.queryenv_service = _QueryEnv()
         bus.platform = _Platform()
         message = _Message()
@@ -212,7 +212,7 @@ class Test(unittest.TestCase):
         self.assertEqual(datadir, '/mnt/dbstorage/mysql-data/')
         self.assertEqual(log_bin, '/mnt/dbstorage/mysql-misc/binlog.log')
 
-    def test_on_before_host_up_slave_eph(self):
+    def test_on_before_host_up_subordinate_eph(self):
         bus.queryenv_service = _QueryEnv()
         bus.platform = _Platform()
         message = _Message()
@@ -227,7 +227,7 @@ class Test(unittest.TestCase):
         self.assertEqual(datadir, '/mnt/dbstorage/mysql-data/')
         self.assertEqual(log_bin, '/mnt/dbstorage/mysql-misc/binlog.log')
 
-    def test_on_Mysql_PromoteToMaster(self):
+    def test_on_Mysql_PromoteToMain(self):
         bus.queryenv_service = _QueryEnv()
         bus.platform = _Platform()
         config = bus.config
@@ -238,7 +238,7 @@ class Test(unittest.TestCase):
         message.repl_password = '456'
         message.stat_password = '789'
         handler = _MysqlHandler()
-        handler.on_Mysql_PromoteToMaster(message)
+        handler.on_Mysql_PromoteToMain(message)
 
 def mysql_password(str):
     pass1 = hashlib.sha1(str).digest()
@@ -268,7 +268,7 @@ class _QueryEnv:
     def list_role_params(self, role_name):
         return _Bunch(
                 mysql_data_storage_engine = self.storage,
-                mysql_master_ebs_volume_id = 'test-id',
+                mysql_main_ebs_volume_id = 'test-id',
                 ebs_snap_id = 'test_snap_id'
                 )
 
@@ -290,7 +290,7 @@ class _Message:
         self.mysql_stat_password = None
         self.mysql_stat_user = None
         self.local_ip = LOCAL_IP
-        self.mysql_replication_master = 1
+        self.mysql_replication_main = 1
 
 if __name__ == "__main__":
     init_tests()

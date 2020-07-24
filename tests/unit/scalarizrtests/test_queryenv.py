@@ -104,7 +104,7 @@ jWaz4RQX6FHZJY7cameJy1w+phAE4ufQ4TcshddO+dZlYUAspYWJm3gBEaq6K76g
         self.assertFalse(hosts is None)
         self.assertEqual(host.internal_ip, "211.31.14.198")
         self.assertEqual(host.external_ip, "211.31.14.198")
-        self.assertTrue(host.replication_master)
+        self.assertTrue(host.replication_main)
         self.assertEqual(host.index, 1)
 
 

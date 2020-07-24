@@ -258,7 +258,7 @@ class ListRolesCommand(Command):
     method = "list_roles"
     group = "QueryEnv"
     fields = ['behaviour','name', 'farm-role-id', 'index', 'internal-ip',
-            'external-ip', 'replication-master']
+            'external-ip', 'replication-main']
     parser = OptionParser(usage='list-roles [-b --behaviour] '
             '[-r --role] [--with-initializing]', description='Display roles list',
              formatter= IndHelpFormatter())
@@ -274,7 +274,7 @@ class ListRolesCommand(Command):
             for host in d.hosts:
                 yield [behaviour, d.name, d.farm_role_id, str(host.index),
                         host.internal_ip, host.external_ip,
-                        str(host.replication_master)]
+                        str(host.replication_main)]
 
 
 class GetHttpsCertificateCommand(Command):

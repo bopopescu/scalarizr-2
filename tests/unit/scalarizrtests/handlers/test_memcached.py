@@ -19,7 +19,7 @@ class _QueryEnv:
         return [_Bunch(
                 behaviour = "app",
                 name = "nginx",
-                hosts = [_Bunch(index='1',replication_master="1",internal_ip="8.8.8.8",external_ip="192.168.1.93")]
+                hosts = [_Bunch(index='1',replication_main="1",internal_ip="8.8.8.8",external_ip="192.168.1.93")]
                 )]
 
 

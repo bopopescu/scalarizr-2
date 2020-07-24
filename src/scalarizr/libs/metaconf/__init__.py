@@ -645,12 +645,12 @@ bh.text = "mysql"
 conf = Configuration("ini")
 bhs = conf.get_list("general/behaviour")
 platform = conf.get("general/platform")
-conf.set("handler_mysql/replication_master", 1, bool)
+conf.set("handler_mysql/replication_main", 1, bool)
 
 # Access sections
 sect = conf.subset("handler_mysql")  # 1 way
 sect = conf["handler_mysql"]                    # 2 shorter way
-sect.set("replication_master", 1, bool)
+sect.set("replication_main", 1, bool)
 
 
 class XmlFormatProvider:

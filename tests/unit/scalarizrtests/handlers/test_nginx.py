@@ -170,7 +170,7 @@ class TestNginx(unittest.TestCase):
 
 role_host = RoleHost(
                                                 index='1',
-                                                replication_master="1",
+                                                replication_main="1",
                                                 internal_ip="8.8.8.8",
                                                 external_ip="192.168.1.93")
 vhost = VirtualHost(

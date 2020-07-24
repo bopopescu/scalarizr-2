@@ -53,7 +53,7 @@ def restore(*args, **kwds):
 
 class Backup(bases.Task):
     features = {
-            'start_slave': True
+            'start_subordinate': True
     }
 
     def __init__(self,
@@ -71,13 +71,13 @@ class Backup(bases.Task):
 class Restore(bases.Task):
 
     features = {
-            'master_binlog_reset': False
+            'main_binlog_reset': False
     }
     '''
-    When 'master_binlog_reset' = False,
-    rolling this restore on Master causes replication binary log reset.
-    Slaves should start from the binary log head. Detecting the first
-    position in binary log is implementation dependent and Master is
+    When 'main_binlog_reset' = False,
+    rolling this restore on Main causes replication binary log reset.
+    Subordinates should start from the binary log head. Detecting the first
+    position in binary log is implementation dependent and Main is
     responsible for this.
     '''
 

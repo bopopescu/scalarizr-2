@@ -309,7 +309,7 @@ for behavior in ('mysql', 'mysql2', 'percona'):
             'volume,volume_config': 
                             Json('%s/storage/%s.json' % (private_dir, 'mysql'), 
                                     'scalarizr.storage2.volume'),
-            '*_password,log_*,replication_master': 
+            '*_password,log_*,replication_main': 
                             Ini('%s/%s.ini' % (private_dir, behavior), section),
             'mysqldump_options': 
                             Ini('%s/%s.ini' % (public_dir, behavior), section)
@@ -318,7 +318,7 @@ for behavior in ('mysql', 'mysql2', 'percona'):
 __node__['redis'] = Compound({
         'volume,volume_config': Json('%s/storage/%s.json' % (private_dir, 'redis'),
                  'scalarizr.storage2.volume'),
-        'replication_master,persistence_type,use_password,master_password': Ini(
+        'replication_main,persistence_type,use_password,main_password': Ini(
                 '%s/%s.ini' % (private_dir, 'redis'), 'redis')
 })
 
@@ -334,7 +334,7 @@ __node__['rabbitmq'] = Compound({
 __node__['postgresql'] = Compound({
 'volume,volume_config': Json('%s/storage/%s.json' % (private_dir, 'postgresql'),
         'scalarizr.storage2.volume'),
-'replication_master,pg_version,scalr_password,root_password, root_user': Ini(
+'replication_main,pg_version,scalr_password,root_password, root_user': Ini(
         '%s/%s.ini' % (private_dir, 'postgresql'), 'postgresql')
 })
 

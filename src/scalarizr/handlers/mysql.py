@@ -59,7 +59,7 @@ MYSQL_CLI = which('mysql')
 MYSQLDUMP = which('mysqldump')
 MYCNF = '/etc/my.cnf' if disttool.is_redhat_based() else '/etc/mysql/my.cnf'
 
-change_master_timeout = 30
+change_main_timeout = 30
 
 
 class MysqlInitScript(initdv2.ParametrizedInitScript):
@@ -173,7 +173,7 @@ class MysqlServiceConfigurator:
 OPT_ROOT_PASSWORD               = "root_password"
 OPT_REPL_PASSWORD               = "repl_password"
 OPT_STAT_PASSWORD       = "stat_password"
-OPT_REPLICATION_MASTER  = "replication_master"
+OPT_REPLICATION_MASTER  = "replication_main"
 OPT_LOG_FILE                    = "log_file"
 OPT_LOG_POS                             = "log_pos"
 OPT_VOLUME_CNF                  = 'volume_config'
@@ -183,7 +183,7 @@ OPT_MYSQLD_PATH                 = 'mysqld_path'
 OPT_MYSQL_PATH                  = 'mysql_path'
 OPT_MYSQLDUMP_PATH              = 'mysqldump_path'
 OPT_MYCNF_PATH                  = 'mycnf_path'
-OPT_CHANGE_MASTER_TIMEOUT = 'change_master_timeout'
+OPT_CHANGE_MASTER_TIMEOUT = 'change_main_timeout'
 
 # System users
 ROOT_USER                               = "scalr"
@@ -264,10 +264,10 @@ Failover scenario:
 
 1. Cloud support pluggable disks (ex: EBS)
 +-------+              +------------------+                     +--------+
-| Scalr |              | Slave1 -> Master |                     | Slave2 |
+| Scalr |              | Subordinate1 -> Main |                     | Subordinate2 |
 +-------+              +------------------+                     +--------+
 
-     Mysql_PromoteToMaster
+     Mysql_PromoteToMain
        - root_password
        - repl_password
        - stat_password
@@ -276,15 +276,15 @@ Failover scenario:
 
                                                  STOP SLAVE
                              vol = Storage(volume_config)
-                                                 vol.detach() from Master
-                                                 vol.attach() to Slave1
+                                                 vol.detach() from Main
+                                                 vol.attach() to Subordinate1
                                                  start mysql
 
-     Mysql_PromoteToMasterResult
+     Mysql_PromoteToMainResult
        - volume_config
      <--------------------------
 
-     Mysql_NewMasterUp
+     Mysql_NewMainUp
        - root_password
        - repl_password
        - stat_password
@@ -295,10 +295,10 @@ Failover scenario:
 
 2. Cloud has no pluggable disks (ex: Rackspace)
 +-------+              +------------------+                     +--------+
-| Scalr |              | Slave1 -> Master |                     | Slave2 |
+| Scalr |              | Subordinate1 -> Main |                     | Subordinate2 |
 +-------+              +------------------+                     +--------+
 
-         Mysql_PromoteToMaster
+         Mysql_PromoteToMain
            - root_password
            - repl_password
            - stat_password
@@ -309,13 +309,13 @@ Failover scenario:
                              start mysql
                              create snapshot
 
-     Mysql_PromoteToMasterResult
+     Mysql_PromoteToMainResult
        - snapshot_config
        - log_file
        - log_pos
     <----------------------------
 
-         Mysql_NewMasterUp
+         Mysql_NewMainUp
            - local_ip
            - repl_password
            - snapshot_config
@@ -365,25 +365,25 @@ class MysqlMessages:
     @ivar farm_role_id
     """
 
-    PROMOTE_TO_MASTER       = "Mysql_PromoteToMaster"
+    PROMOTE_TO_MASTER       = "Mysql_PromoteToMain"
     """
     @ivar root_password: 'scalr' user password
     @ivar repl_password: 'scalr_repl' user password
     @ivar stat_password: 'scalr_stat' user password
-    @ivar volume_config?: Master storage configuration
+    @ivar volume_config?: Main storage configuration
     """
 
-    PROMOTE_TO_MASTER_RESULT = "Mysql_PromoteToMasterResult"
+    PROMOTE_TO_MASTER_RESULT = "Mysql_PromoteToMainResult"
     """
     @ivar status: ok|error
     @ivar last_error: Last error message in case of status = 'error'
-    @ivar volume_config: Master storage configuration
+    @ivar volume_config: Main storage configuration
     @ivar snapshot_config?
     @ivar log_file?
     @ivar log_pos?
     """
 
-    NEW_MASTER_UP = "Mysql_NewMasterUp"
+    NEW_MASTER_UP = "Mysql_NewMainUp"
     """
     @ivar behaviour
     @ivar local_ip
@@ -400,25 +400,25 @@ class MysqlMessages:
 
     = HOST_INIT_RESPONSE =
     @ivar mysql=dict(
-            replication_master:     1|0
-            root_password:                  'scalr' user password                                   (on slave)
-            repl_password:                  'scalr_repl' user password                              (on slave)
-            stat_password:                  'scalr_stat' user password                              (on slave)
-            log_file:                               Binary log file                                                 (on slave)
-            log_pos:                                Binary log file position                                (on slave)
-            volume_config                   Master storage configuration                    (on master)
-            snapshot_config                 Master storage snapshot                                 (both)
+            replication_main:     1|0
+            root_password:                  'scalr' user password                                   (on subordinate)
+            repl_password:                  'scalr_repl' user password                              (on subordinate)
+            stat_password:                  'scalr_stat' user password                              (on subordinate)
+            log_file:                               Binary log file                                                 (on subordinate)
+            log_pos:                                Binary log file position                                (on subordinate)
+            volume_config                   Main storage configuration                    (on main)
+            snapshot_config                 Main storage snapshot                                 (both)
     )
 
     = HOST_UP =
     @ivar mysql=dict(
-            root_password:                  'scalr' user password                                   (on master)
-            repl_password:                  'scalr_repl' user password                              (on master)
-            stat_password:                  'scalr_stat' user password                              (on master)
-            log_file:                               Binary log file                                                 (on master)
-            log_pos:                                Binary log file position                                (on master)
+            root_password:                  'scalr' user password                                   (on main)
+            repl_password:                  'scalr_repl' user password                              (on main)
+            stat_password:                  'scalr_stat' user password                              (on main)
+            log_file:                               Binary log file                                                 (on main)
+            log_pos:                                Binary log file position                                (on main)
             volume_config:                  Current storage configuration                   (both)
-            snapshot_config:                Master storage snapshot                                 (on master)
+            snapshot_config:                Main storage snapshot                                 (on main)
     )
     """
 
@@ -629,17 +629,17 @@ class MysqlHandler(ServiceCtlHandler):
 
                 'mysql_data_bundle',
 
-                # @param host: New master hostname
-                'before_mysql_change_master',
+                # @param host: New main hostname
+                'before_mysql_change_main',
 
-                # @param host: New master hostname
+                # @param host: New main hostname
                 # @param log_file: log file to start from
                 # @param log_pos: log pos to start from
-                'mysql_change_master'
+                'mysql_change_main'
 
-                'before_slave_promote_to_master',
+                'before_subordinate_promote_to_main',
 
-                'slave_promote_to_master'
+                'subordinate_promote_to_main'
         )
 
         self._phase_mysql = 'Configure MySQL'
@@ -653,7 +653,7 @@ class MysqlHandler(ServiceCtlHandler):
         self._step_create_users = 'Create Scalr users'
         self._step_restore_users = 'Restore Scalr users'
         self._step_create_data_bundle = 'Create data bundle'
-        self._step_change_replication_master = 'Change replication Master'
+        self._step_change_replication_main = 'Change replication Main'
         self._step_innodb_recovery = 'InnoDB recovery'
         self._step_collect_hostup_data = 'Collect HostUp data'
 
@@ -725,10 +725,10 @@ class MysqlHandler(ServiceCtlHandler):
         ini = self._cnf.rawini
         self._role_name = ini.get(config.SECT_GENERAL, config.OPT_ROLE_NAME)
         try:
-            self._change_master_timeout = globals()['change_master_timeout'] = int(
+            self._change_main_timeout = globals()['change_main_timeout'] = int(
                             ini.get(CNF_SECTION, OPT_CHANGE_MASTER_TIMEOUT) or '30')
         except ConfigParser.Error:
-            self._change_master_timeout = globals()['change_master_timeout'] = 30
+            self._change_main_timeout = globals()['change_main_timeout'] = 30
 
         self._storage_path = STORAGE_PATH
         self._data_dir = os.path.join(self._storage_path, STORAGE_DATA_DIR)
@@ -755,10 +755,10 @@ class MysqlHandler(ServiceCtlHandler):
     def get_initialization_phases(self, hir_message):
         if BEHAVIOUR in hir_message.body:
             steps = [self._step_accept_scalr_conf, self._step_create_storage]
-            if hir_message.body['mysql']['replication_master'] == '1':
+            if hir_message.body['mysql']['replication_main'] == '1':
                 steps.append(self._step_create_data_bundle)
             else:
-                steps.append(self._step_change_replication_master)
+                steps.append(self._step_change_replication_main)
             steps.append(self._step_collect_hostup_data)
 
 
@@ -780,9 +780,9 @@ class MysqlHandler(ServiceCtlHandler):
 
     def on_Mysql_CreatePmaUser(self, message):
         try:
-            # Operation allowed only on Master server
+            # Operation allowed only on Main server
             if not int(self._cnf.rawini.get(CNF_SECTION, OPT_REPLICATION_MASTER)):
-                raise HandlerError('Cannot add pma user on slave. It should be a Master server')
+                raise HandlerError('Cannot add pma user on subordinate. It should be a Main server')
 
             root_password, = self._get_ini_options(OPT_ROOT_PASSWORD)
             pma_server_ip = message.pma_server_ip
@@ -967,7 +967,7 @@ class MysqlHandler(ServiceCtlHandler):
                 '--skip-networking',
                 '--skip-grant',
                 '--bootstrap',
-                '--skip-slave-start')
+                '--skip-subordinate-start')
         '''
         if ndb_support:
                 mysqld_safe_cmd += ('--skip-ndbcluster',)
@@ -987,32 +987,32 @@ class MysqlHandler(ServiceCtlHandler):
 
 
     @_reload_mycnf
-    def on_Mysql_PromoteToMaster(self, message):
+    def on_Mysql_PromoteToMain(self, message):
         """
-        Promote slave to master
+        Promote subordinate to main
         @type message: scalarizr.messaging.Message
-        @param message: Mysql_PromoteToMaster
+        @param message: Mysql_PromoteToMain
         """
         old_conf                = None
         new_storage_vol = None
 
         if not int(self._cnf.rawini.get(CNF_SECTION, OPT_REPLICATION_MASTER)):
 
-            bus.fire('before_slave_promote_to_master')
+            bus.fire('before_subordinate_promote_to_main')
 
             if bus.scalr_version >= (2, 2):
-                master_storage_conf = message.body.get('volume_config')
+                main_storage_conf = message.body.get('volume_config')
             else:
                 if 'volume_id' in message.body:
-                    master_storage_conf = dict(type='ebs', id=message.body['volume_id'])
+                    main_storage_conf = dict(type='ebs', id=message.body['volume_id'])
                 else:
-                    master_storage_conf = None
+                    main_storage_conf = None
 
             tx_complete = False
 
             try:
                 # Stop mysql
-                if master_storage_conf and master_storage_conf['type'] != 'eph':
+                if main_storage_conf and main_storage_conf['type'] != 'eph':
                     if self._init_script.running:
                         mysql = spawn_mysql_cli(ROOT_USER, message.root_password)
                         timeout = 180
@@ -1021,18 +1021,18 @@ class MysqlHandler(ServiceCtlHandler):
                             mysql.expect("mysql>", timeout=timeout)
                         except pexpect.TIMEOUT:
                             raise HandlerError("Timeout (%d seconds) reached " 
-                                            "while waiting for slave stop" % (timeout,))
+                                            "while waiting for subordinate stop" % (timeout,))
                         finally:
                             mysql.close()
-                        self._stop_service('Swapping storages to promote slave to master')
+                        self._stop_service('Swapping storages to promote subordinate to main')
 
-                    # Unplug slave storage and plug master one
-                    #self._unplug_storage(slave_vol_id, self._storage_path)
+                    # Unplug subordinate storage and plug main one
+                    #self._unplug_storage(subordinate_vol_id, self._storage_path)
                     old_conf = self.storage_vol.detach(force=True) # ??????
-                    #master_vol = self._take_master_volume(master_vol_id)
-                    #self._plug_storage(master_vol.id, self._storage_path)
-                    new_storage_vol = self._plug_storage(self._storage_path, master_storage_conf)
-                    # Continue if master storage is a valid MySQL storage
+                    #main_vol = self._take_main_volume(main_vol_id)
+                    #self._plug_storage(main_vol.id, self._storage_path)
+                    new_storage_vol = self._plug_storage(self._storage_path, main_storage_conf)
+                    # Continue if main storage is a valid MySQL storage
                     if self._storage_valid():
                         # Patch configuration files
                         self._move_mysql_dir('mysqld/log_bin', self._binlog_base)
@@ -1057,7 +1057,7 @@ class MysqlHandler(ServiceCtlHandler):
                     else:
                         raise HandlerError("%s is not a valid MySQL storage" % self._storage_path)
 
-                elif not master_storage_conf or master_storage_conf['type'] == 'eph':
+                elif not main_storage_conf or main_storage_conf['type'] == 'eph':
                     self._start_service()
                     mysql = spawn_mysql_cli(ROOT_USER, message.root_password)
                     timeout = 180
@@ -1067,10 +1067,10 @@ class MysqlHandler(ServiceCtlHandler):
                         mysql.sendline("RESET MASTER;")
                         mysql.expect("mysql>", 20)
                         coreutils.remove(os.path.join(self._data_dir, 'relay-log.info'))
-                        coreutils.remove(os.path.join(self._data_dir, 'master.info'))
+                        coreutils.remove(os.path.join(self._data_dir, 'main.info'))
                     except pexpect.TIMEOUT:
                         raise HandlerError("Timeout (%d seconds) reached " +
-                                                "while waiting for slave stop and master reset." % (timeout,))
+                                                "while waiting for subordinate stop and main reset." % (timeout,))
                     finally:
                         mysql.close()
 
@@ -1095,7 +1095,7 @@ class MysqlHandler(ServiceCtlHandler):
                     self.send_message(MysqlMessages.PROMOTE_TO_MASTER_RESULT, msg_data)
 
                 tx_complete = True
-                bus.fire('slave_promote_to_master')
+                bus.fire('subordinate_promote_to_main')
 
             except (Exception, BaseException), e:
                 LOG.exception(e)
@@ -1103,7 +1103,7 @@ class MysqlHandler(ServiceCtlHandler):
 
                 if new_storage_vol:
                     new_storage_vol.detach()
-                # Get back slave storage
+                # Get back subordinate storage
                 if old_conf:
                     self._plug_storage(self._storage_path, old_conf)
 
@@ -1115,35 +1115,35 @@ class MysqlHandler(ServiceCtlHandler):
                 # Start MySQL
                 self._start_service()
 
-            if tx_complete and master_storage_conf and master_storage_conf['type'] != 'eph':
-                # Delete slave EBS
+            if tx_complete and main_storage_conf and main_storage_conf['type'] != 'eph':
+                # Delete subordinate EBS
                 self.storage_vol.destroy(remove_disks=True)
                 self.storage_vol = new_storage_vol
                 Storage.backup_config(self.storage_vol.config(), self._volume_config_path)
         else:
-            LOG.warning('Cannot promote to master. Already master')
+            LOG.warning('Cannot promote to main. Already main')
 
     @_reload_mycnf
-    def on_Mysql_NewMasterUp(self, message):
+    def on_Mysql_NewMainUp(self, message):
         """
-        Switch replication to a new master server
+        Switch replication to a new main server
         @type message: scalarizr.messaging.Message
-        @param message:  Mysql_NewMasterUp
+        @param message:  Mysql_NewMainUp
         """
-        is_repl_master, = self._get_ini_options(OPT_REPLICATION_MASTER)
+        is_repl_main, = self._get_ini_options(OPT_REPLICATION_MASTER)
 
-        if int(is_repl_master):
-            LOG.debug('Skip NewMasterUp. My replication role is master')
+        if int(is_repl_main):
+            LOG.debug('Skip NewMainUp. My replication role is main')
             return
         mysql = message.body
         host = message.local_ip or message.remote_ip
-        LOG.info("Switching replication to a new MySQL master %s", host)
-        bus.fire('before_mysql_change_master', host=host)
+        LOG.info("Switching replication to a new MySQL main %s", host)
+        bus.fire('before_mysql_change_main', host=host)
 
         if 'snapshot_config' in mysql and mysql['snapshot_config']['type'] != 'eph':
-            LOG.info('Reinitializing Slave from the new snapshot %s (log_file: %s log_pos: %s)',
+            LOG.info('Reinitializing Subordinate from the new snapshot %s (log_file: %s log_pos: %s)',
                             message.snapshot_config['id'], message.log_file, message.log_pos)
-            self._stop_service('Swapping storages to reinitialize slave')
+            self._stop_service('Swapping storages to reinitialize subordinate')
 
             LOG.debug('Destroing old storage')
             self.storage_vol.destroy()
@@ -1165,10 +1165,10 @@ class MysqlHandler(ServiceCtlHandler):
         my_cli = spawn_mysql_cli(ROOT_USER, message.root_password)
 
         if not 'snapshot_config' in mysql or mysql['snapshot_config']['type'] == 'eph':
-            LOG.debug("Stopping slave i/o thread")
+            LOG.debug("Stopping subordinate i/o thread")
             my_cli.sendline("STOP SLAVE IO_THREAD;")
             my_cli.expect("mysql>")
-            LOG.debug("Slave i/o thread stopped")
+            LOG.debug("Subordinate i/o thread stopped")
 
             LOG.debug("Retrieving current log_file and log_pos")
             my_cli.sendline("SHOW SLAVE STATUS\\G");
@@ -1176,24 +1176,24 @@ class MysqlHandler(ServiceCtlHandler):
             log_file = log_pos = None
             for line in my_cli.before.split("\n"):
                 pair = map(str.strip, line.split(": ", 1))
-                if pair[0] == "Master_Log_File":
+                if pair[0] == "Main_Log_File":
                     log_file = pair[1]
-                elif pair[0] == "Read_Master_Log_Pos":
+                elif pair[0] == "Read_Main_Log_Pos":
                     log_pos = pair[1]
             LOG.debug("Retrieved log_file=%s, log_pos=%s", log_file, log_pos)
 
-        self._change_master(
+        self._change_main(
                 host=host,
                 user=REPL_USER,
                 password=message.repl_password,
                 log_file=log_file,
                 log_pos=log_pos,
-                timeout=self._change_master_timeout,
+                timeout=self._change_main_timeout,
                 my_cli=my_cli
         )
 
         LOG.debug("Replication switched")
-        bus.fire('mysql_change_master', host=host, log_file=log_file, log_pos=log_pos)
+        bus.fire('mysql_change_main', host=host, log_file=log_file, log_pos=log_pos)
 
 
     def on_before_reboot_start(self, *args, **kwargs):
@@ -1268,13 +1268,13 @@ class MysqlHandler(ServiceCtlHandler):
         except:
             pass
 
-        repl = 'master' if int(self._cnf.rawini.get(CNF_SECTION, OPT_REPLICATION_MASTER)) else 'slave'
-        if repl == 'master':
+        repl = 'main' if int(self._cnf.rawini.get(CNF_SECTION, OPT_REPLICATION_MASTER)) else 'subordinate'
+        if repl == 'main':
             bus.fire('before_mysql_configure', replication=repl)
-            self._init_master(message)
+            self._init_main(message)
         else:
             bus.fire('before_mysql_configure', replication=repl)
-            self._init_slave(message)
+            self._init_subordinate(message)
 
         bus.fire('service_configured', service_name=SERVICE_NAME, replication=repl)
 
@@ -1288,13 +1288,13 @@ class MysqlHandler(ServiceCtlHandler):
             system2((chcon[0], '-R', '-u', 'system_u', '-r',
                      'object_r', '-t', 'mysqld_db_t', os.path.dirname(STORAGE_PATH)), raise_exc=False)
 
-    def _init_master(self, message):
+    def _init_main(self, message):
         """
-        Initialize MySQL master
+        Initialize MySQL main
         @type message: scalarizr.messaging.Message
         @param message: HostUp message
         """
-        LOG.info("Initializing MySQL master")
+        LOG.info("Initializing MySQL main")
 
         with bus.initialization_op as op:
             with op.step(self._step_create_storage):
@@ -1309,7 +1309,7 @@ class MysqlHandler(ServiceCtlHandler):
                 Storage.backup_config(self.storage_vol.config(), self._volume_config_path)
 
                 # Stop MySQL server
-                #self._stop_service('Required by Master initialization process')
+                #self._stop_service('Required by Main initialization process')
                 self._flush_logs()
 
             msg_data = None
@@ -1336,9 +1336,9 @@ class MysqlHandler(ServiceCtlHandler):
 
                 with op.step(self._step_patch_conf):
                     # Init replication
-                    self._replication_init(master=True)
+                    self._replication_init(main=True)
 
-                # If It's 1st init of mysql master storage
+                # If It's 1st init of mysql main storage
                 if not storage_valid:
                     self._copy_debian_cnf()
 
@@ -1415,13 +1415,13 @@ class MysqlHandler(ServiceCtlHandler):
                 ret['snapshot_id'] = snap.config()['id']
         return ret
 
-    def _init_slave(self, message):
+    def _init_subordinate(self, message):
         """
-        Initialize MySQL slave
+        Initialize MySQL subordinate
         @type message: scalarizr.messaging.Message
         @param message: HostUp message
         """
-        LOG.info("Initializing MySQL slave")
+        LOG.info("Initializing MySQL subordinate")
 
         with bus.initialization_op as op:
             with op.step(self._step_create_storage):
@@ -1429,7 +1429,7 @@ class MysqlHandler(ServiceCtlHandler):
                 root_pass, repl_pass, log_file, log_pos = self._get_ini_options(
                                 OPT_ROOT_PASSWORD, OPT_REPL_PASSWORD, OPT_LOG_FILE, OPT_LOG_POS)
 
-                LOG.debug("Initialize slave storage")
+                LOG.debug("Initialize subordinate storage")
                 self.storage_vol = self._plug_storage(self._storage_path,
                                 dict(snapshot=Storage.restore_config(self._snapshot_config_path)))
                 Storage.backup_config(self.storage_vol.config(), self._volume_config_path)
@@ -1438,7 +1438,7 @@ class MysqlHandler(ServiceCtlHandler):
             try:
                 with op.step(self._step_patch_conf):
                     # Stop MySQL
-                    #self._stop_service('Required by Slave initialization process')
+                    #self._stop_service('Required by Subordinate initialization process')
                     self._flush_logs()
 
                     # Change configuration files
@@ -1453,32 +1453,32 @@ class MysqlHandler(ServiceCtlHandler):
                     self._move_mysql_dir('mysqld/datadir', self._data_dir)
                     self._move_mysql_dir('mysqld/log_bin', self._binlog_base)
                     self._change_selinux_ctx()
-                    self._replication_init(master=False)
+                    self._replication_init(main=False)
                     self._copy_debian_cnf_back()
 
                 with op.step(self._step_innodb_recovery):
                     self._innodb_recovery()
                     self._start_service()
 
-                with op.step(self._step_change_replication_master):
-                    # Change replication master
-                    master_host = None
-                    LOG.info("Requesting master server")
-                    while not master_host:
+                with op.step(self._step_change_replication_main):
+                    # Change replication main
+                    main_host = None
+                    LOG.info("Requesting main server")
+                    while not main_host:
                         try:
-                            master_host = list(host
+                            main_host = list(host
                                     for host in self._queryenv.list_roles(behaviour=BEHAVIOUR)[0].hosts
-                                    if host.replication_master)[0]
+                                    if host.replication_main)[0]
                         except IndexError:
-                            LOG.debug("QueryEnv respond with no mysql master. " +
+                            LOG.debug("QueryEnv respond with no mysql main. " +
                                             "Waiting %d seconds before the next attempt", 5)
                             time.sleep(5)
 
-                    LOG.debug("Master server obtained (local_ip: %s, public_ip: %s)",
-                                    master_host.internal_ip, master_host.external_ip)
+                    LOG.debug("Main server obtained (local_ip: %s, public_ip: %s)",
+                                    main_host.internal_ip, main_host.external_ip)
 
-                    host = master_host.internal_ip or master_host.external_ip
-                    self._change_master(
+                    host = main_host.internal_ip or main_host.external_ip
+                    self._change_main(
                             host=host,
                             user=REPL_USER,
                             password=repl_pass,
@@ -1486,7 +1486,7 @@ class MysqlHandler(ServiceCtlHandler):
                             log_pos=log_pos,
                             mysql_user=ROOT_USER,
                             mysql_password=root_pass,
-                            timeout=self._change_master_timeout
+                            timeout=self._change_main_timeout
                     )
 
                 with op.step(self._step_collect_hostup_data):
@@ -1517,8 +1517,8 @@ class MysqlHandler(ServiceCtlHandler):
 
     @property
     def mysql_tags(self):
-        is_master = bool(int(self._get_ini_options(OPT_REPLICATION_MASTER)[0]))
-        return prepare_tags(BEHAVIOUR, db_replication_role=is_master)
+        is_main = bool(int(self._get_ini_options(OPT_REPLICATION_MASTER)[0]))
+        return prepare_tags(BEHAVIOUR, db_replication_role=is_main)
 
 
     def _insert_iptables_rules(self):
@@ -1587,13 +1587,13 @@ class MysqlHandler(ServiceCtlHandler):
                     log_file = log_row.group(1)
                     log_pos = log_row.group(2)
                 else:
-                    raise HandlerError('SHOW MASTER STATUS returns empty set. Master is not started?')
+                    raise HandlerError('SHOW MASTER STATUS returns empty set. Main is not started?')
 
                 '''
                 try:
                         status = mysql.client.fetchall('SHOW MASTER STATUS')[0]
                 except IndexError:
-                        raise HandlerError('SHOW MASTER STATUS returns empty set. Master is not started?')
+                        raise HandlerError('SHOW MASTER STATUS returns empty set. Main is not started?')
                 else:
                         log_file, log_pos = status['File'], status['Position']
                 '''
@@ -1601,12 +1601,12 @@ class MysqlHandler(ServiceCtlHandler):
                 my_cli.sendline('SHOW SLAVE STATUS \G')
                 my_cli.expect('mysql>')
                 lines = my_cli.before
-                log_row = re.search(re.compile('Relay_Master_Log_File:\s*(.*?)$.*?Exec_Master_Log_Pos:\s*(.*?)$', re.M | re.S), lines)
+                log_row = re.search(re.compile('Relay_Main_Log_File:\s*(.*?)$.*?Exec_Main_Log_Pos:\s*(.*?)$', re.M | re.S), lines)
                 if log_row:
                     log_file = log_row.group(1).strip()
                     log_pos = log_row.group(2).strip()
                 else:
-                    raise HandlerError('SHOW SLAVE STATUS returns empty set. Slave is not started?')
+                    raise HandlerError('SHOW SLAVE STATUS returns empty set. Subordinate is not started?')
 
             # Creating storage snapshot
             snap = None if dry_run else self._create_storage_snapshot(tags)
@@ -1660,7 +1660,7 @@ class MysqlHandler(ServiceCtlHandler):
         stat_password = stat_pass if stat_pass else cryptotool.pwgen(20)
         self._add_mysql_user(my_cli, root_user, root_password, '%')
         self._add_mysql_user(my_cli, root_user, root_password, 'localhost')
-        self._add_mysql_user(my_cli, repl_user, repl_password, '%', ('Repl_slave_priv',))
+        self._add_mysql_user(my_cli, repl_user, repl_password, '%', ('Repl_subordinate_priv',))
         self._add_mysql_user(my_cli, stat_user, stat_password, '%', ('Repl_client_priv',))
 
         if should_term_mysqld:
@@ -1711,10 +1711,10 @@ class MysqlHandler(ServiceCtlHandler):
 
 
     @_reload_mycnf
-    def _replication_init(self, master=True):
+    def _replication_init(self, main=True):
         # Create replication config
         self._mysql_config.set('mysqld/expire_logs_days', 10, force=True)
-        server_id = 1 if master else int(random.random() * 100000)+1
+        server_id = 1 if main else int(random.random() * 100000)+1
         self._mysql_config.remove('mysqld/server-id')
         self._mysql_config.add('mysqld/server-id', server_id)
         # Patch networking
@@ -1726,13 +1726,13 @@ class MysqlHandler(ServiceCtlHandler):
         self.write_config()
 
 
-    def _change_master(self, host, user, password, log_file, log_pos,
+    def _change_main(self, host, user, password, log_file, log_pos,
                                     my_cli=None, mysql_user=None, mysql_password=None,
                                     connect_retry=15, timeout=None):
         my_cli = my_cli or spawn_mysql_cli(mysql_user, mysql_password)
-        LOG.info("Changing replication Master to server %s (log_file: %s, log_pos: %s)", host, log_file, log_pos)
+        LOG.info("Changing replication Main to server %s (log_file: %s, log_pos: %s)", host, log_file, log_pos)
 
-        # Changing replication master
+        # Changing replication main
         my_cli.sendline('STOP SLAVE;')
         my_cli.expect('mysql>')
         my_cli.sendline('CHANGE MASTER TO MASTER_HOST="%(host)s", \
@@ -1743,14 +1743,14 @@ class MysqlHandler(ServiceCtlHandler):
                                         MASTER_CONNECT_RETRY=%(connect_retry)s;' % vars())
         my_cli.expect('mysql>')
 
-        # Starting slave
+        # Starting subordinate
         my_cli.sendline('START SLAVE;')
         my_cli.expect('mysql>')
         status = my_cli.before
         if re.search(re.compile('ERROR', re.MULTILINE), status):
-            raise HandlerError('Cannot start mysql slave: %s' % status)
+            raise HandlerError('Cannot start mysql subordinate: %s' % status)
 
-        def slave_status():
+        def subordinate_status():
             my_cli.sendline('SHOW SLAVE STATUS\G')
             my_cli.expect('mysql>')
             out = my_cli.before
@@ -1761,9 +1761,9 @@ class MysqlHandler(ServiceCtlHandler):
             time_until = time.time() + timeout
             status = None
             while time.time() <= time_until:
-                status = slave_status()
-                if status['Slave_IO_Running'] == 'Yes' and \
-                        status['Slave_SQL_Running'] == 'Yes':
+                status = subordinate_status()
+                if status['Subordinate_IO_Running'] == 'Yes' and \
+                        status['Subordinate_SQL_Running'] == 'Yes':
                     break
                 time.sleep(5)
             else:
@@ -1772,7 +1772,7 @@ class MysqlHandler(ServiceCtlHandler):
                         logfile = firstmatched(lambda p: os.path.exists(p),
                                                                 ('/var/log/mysqld.log', '/var/log/mysql.log'))
                         if logfile:
-                            gotcha = '[ERROR] Slave I/O thread: '
+                            gotcha = '[ERROR] Subordinate I/O thread: '
                             size = os.path.getsize(logfile)
                             fp = open(logfile, 'r')
                             try:
@@ -1784,21 +1784,21 @@ class MysqlHandler(ServiceCtlHandler):
                             finally:
                                 fp.close()
 
-                    msg = "Cannot change replication Master server to '%s'. "  \
-                                    "Slave_IO_Running: %s, Slave_SQL_Running: %s, " \
+                    msg = "Cannot change replication Main server to '%s'. "  \
+                                    "Subordinate_IO_Running: %s, Subordinate_SQL_Running: %s, " \
                                     "Last_Errno: %s, Last_Error: '%s'" % (
-                                    host, status['Slave_IO_Running'], status['Slave_SQL_Running'],
+                                    host, status['Subordinate_IO_Running'], status['Subordinate_SQL_Running'],
                                     status['Last_Errno'], status['Last_Error'])
                     raise HandlerError(msg)
                 else:
-                    raise HandlerError('Cannot change replication master to %s' % (host))
+                    raise HandlerError('Cannot change replication main to %s' % (host))
         finally:
             try:
                 my_cli.close()
             except:
                 os.kill(my_cli.pid, signal.SIGKILL)
 
-        LOG.debug('Replication master is changed to host %s', host)
+        LOG.debug('Replication main is changed to host %s', host)
 
 
     def _ping_mysql(self):
@@ -1861,7 +1861,7 @@ class MysqlHandler(ServiceCtlHandler):
         if not os.path.exists(self._data_dir):
             return
 
-        info_files = ['relay-log.info', 'master.info']
+        info_files = ['relay-log.info', 'main.info']
         files = os.listdir(self._data_dir)
 
         for file in files:

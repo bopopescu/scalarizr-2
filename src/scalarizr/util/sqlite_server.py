@@ -142,8 +142,8 @@ class ConnectionProxy(Proxy):
 class SqliteServer(object):
 
     def __init__(self, conn_creator):
-        self._master_conn = conn_creator()
-        self._master_conn.isolation_level = None
+        self._main_conn = conn_creator()
+        self._main_conn.isolation_level = None
         self._single_conn_proxy = None
         self._clients = WeakValueDictionary()
         self._cursors = {}
@@ -188,7 +188,7 @@ class SqliteServer(object):
 
     def _cursor_create(self, hash, proxy):
         """
-        self._cursors[hash] = self._master_conn.cursor()
+        self._cursors[hash] = self._main_conn.cursor()
         return self._cursors[hash]
         """
         #LOG.debug('create cursor %s', hash)
@@ -209,7 +209,7 @@ class SqliteServer(object):
 
 
     def _cursor_execute(self, hash, *args, **kwds):
-        cur = self._master_conn.cursor()
+        cur = self._main_conn.cursor()
         try:
             cur.execute(*args, **kwds)
             return {
@@ -242,23 +242,23 @@ class SqliteServer(object):
 
 
     def _conn_set_row_factory(self, hash, f):
-        self._master_conn.row_factory = f
+        self._main_conn.row_factory = f
 
 
     def _conn_set_text_factory(self, hash, f):
-        self._master_conn.text_factory = f
+        self._main_conn.text_factory = f
 
 
     def _conn_get_row_factory(self, hash):
-        return self._master_conn.row_factory
+        return self._main_conn.row_factory
 
 
     def _conn_get_text_factory(self, hash):
-        return self._master_conn.text_factory
+        return self._main_conn.text_factory
 
 
     def _conn_executescript(self, hash, sql):
-        return self._master_conn.executescript(sql)
+        return self._main_conn.executescript(sql)
 
 
     def _conn_execute(self, hash, *args, **kwds):

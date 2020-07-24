@@ -47,7 +47,7 @@ class EphVolume(base.Volume):
     def _ensure(self):
         # snap should be applied after layout: download and extract data.
         # this could be done on already ensured volume.
-        # Example: resync slave data
+        # Example: resync subordinate data
 
         if not self._lvm_volume:
             # First of all, merge self config and snapshot config

@@ -23,7 +23,7 @@ result_msg_file = '/tmp/migration-result.xml'
 host_conf = None
 farm_conf = None
 mysql_conf = None
-master_conf = None
+main_conf = None
 behaviour = None
 role_name = None
 snmp_community_name = None
@@ -60,8 +60,8 @@ def main():
     snmp_community_name = farm_conf['ACCESS_HASH']
 
     if behaviour == 'mysql':
-        if host_conf['MYSQL_ROLE'] != 'master':
-            raise MigrationException('MySQL migration available only for replication master')
+        if host_conf['MYSQL_ROLE'] != 'main':
+            raise MigrationException('MySQL migration available only for replication main')
         mysql_conf = parse_amiscripts_config('/etc/aws/mysql.conf')
         mysql_storage = mysql_conf['MYSQL_STORAGE']
         if mysql_storage == 'ebs':
@@ -282,7 +282,7 @@ def configure_scalarizr_mysql_ebs():
     logger.info('Regenerating Scalr mysql system users')
     passwds = hdlr._add_mysql_users('scalr', 'scalr_repl', 'scalr_stat')
     mysql_hdlr_conf = {'mysql' : {
-            'replication_master' : '1',
+            'replication_main' : '1',
             'root_password' : passwds[0],
             'repl_password' : passwds[1],
             'stat_password' : passwds[2]

@@ -22,7 +22,7 @@ from scalarizr.config import BuiltinBehaviours
 BEHAVIOUR = SERVICE_NAME = 'mysql_proxy'
 CONFIG_FILE_PATH = '/etc/mysql_proxy.conf'
 PID_FILE = '/var/run/mysql-proxy.pid'
-NEW_MASTER_UP = "Mysql_NewMasterUp"
+NEW_MASTER_UP = "Mysql_NewMainUp"
 LOG_FILE = '/var/log/mysql-proxy.log'
 
 LOG = logging.getLogger(__name__)
@@ -191,8 +191,8 @@ class MysqlProxyHandler(ServiceCtlHandler):
 
         queryenv = bus.queryenv_service
         roles = queryenv.list_roles()
-        master = None
-        slaves = []
+        main = None
+        subordinates = []
 
         for role in roles:
             if not is_mysql_role(role.behaviour):
@@ -200,18 +200,18 @@ class MysqlProxyHandler(ServiceCtlHandler):
 
             for host in role.hosts:
                 ip = host.internal_ip or host.external_ip
-                if host.replication_master:
-                    master = ip
+                if host.replication_main:
+                    main = ip
                 else:
-                    slaves.append(ip)
+                    subordinates.append(ip)
 
-        if master:
-            self._logger.debug('Adding mysql master %s to  mysql-proxy defaults file', master)
-            self.config.add('./mysql-proxy/proxy-backend-addresses', '%s:3306' % master)
-        if slaves:
-            self._logger.debug('Adding mysql slaves to  mysql-proxy defaults file: %s', ', '.join(slaves))
-            for slave in slaves:
-                self.config.add('./mysql-proxy/proxy-read-only-backend-addresses', '%s:3306' % slave)
+        if main:
+            self._logger.debug('Adding mysql main %s to  mysql-proxy defaults file', main)
+            self.config.add('./mysql-proxy/proxy-backend-addresses', '%s:3306' % main)
+        if subordinates:
+            self._logger.debug('Adding mysql subordinates to  mysql-proxy defaults file: %s', ', '.join(subordinates))
+            for subordinate in subordinates:
+                self.config.add('./mysql-proxy/proxy-read-only-backend-addresses', '%s:3306' % subordinate)
 
         self.config.set('./mysql-proxy/pid-file', PID_FILE, force=True)
         self.config.set('./mysql-proxy/daemon', 'true', force=True)
@@ -229,4 +229,4 @@ class MysqlProxyHandler(ServiceCtlHandler):
     def on_HostUp(self, message):
         self._reload_backends()
 
-    on_DbMsr_NewMasterUp = on_Mysql_NewMasterUp = on_HostDown = on_HostUp
+    on_DbMsr_NewMainUp = on_Mysql_NewMainUp = on_HostDown = on_HostUp

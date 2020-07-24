@@ -52,7 +52,7 @@ class IpListBuilder(Handler):
                 or message.name == Messages.HOST_DOWN \
                 or message.name == Messages.REBOOT_START \
                 or message.name == Messages.REBOOT_FINISH \
-                or message.name == 'Mysql_NewMasterUp'
+                or message.name == 'Mysql_NewMainUp'
 
     def on_start(self, *args):
         cnf = bus.cnf
@@ -77,7 +77,7 @@ class IpListBuilder(Handler):
                         role.behaviour,
                         host.internal_ip or host.external_ip,
                         modfn=self._create_file,
-                        replication_master=host.replication_master
+                        replication_main=host.replication_main
                 )
 
     def on_HostUp(self, message):
@@ -90,7 +90,7 @@ class IpListBuilder(Handler):
                             rolename, behaviour, ip)
             self._modify_tree(rolename, behaviour, ip,
                             modfn=self._create_file,
-                            replication_master='mysql' in behaviour and self._host_is_replication_master(ip, 'mysql'))
+                            replication_main='mysql' in behaviour and self._host_is_replication_main(ip, 'mysql'))
 
     def on_HostDown(self, message):
         behaviour = message.behaviour
@@ -102,31 +102,31 @@ class IpListBuilder(Handler):
                                             rolename, behaviour, ip)
             self._modify_tree(rolename, behaviour, ip,
                             modfn=self._remove_file,
-                            replication_master='mysql' in behaviour and self._host_is_replication_master(ip, 'mysql'))
+                            replication_main='mysql' in behaviour and self._host_is_replication_main(ip, 'mysql'))
 
-    def on_Mysql_NewMasterUp(self, message):
+    def on_Mysql_NewMainUp(self, message):
         ip = message.local_ip or message.remote_ip
         if ip:
-            self._remove_file(os.path.join(self._base_path, 'mysql-slave', ip))
+            self._remove_file(os.path.join(self._base_path, 'mysql-subordinate', ip))
 
-            master_path = os.path.join(self._base_path, 'mysql-master')
-            if os.path.exists(master_path):
-                shutil.rmtree(master_path)
-            self._create_dir(master_path)
-            self._create_file(os.path.join(master_path, ip))
+            main_path = os.path.join(self._base_path, 'mysql-main')
+            if os.path.exists(main_path):
+                shutil.rmtree(main_path)
+            self._create_dir(main_path)
+            self._create_file(os.path.join(main_path, ip))
 
     on_RebootStart = on_HostDown
 
     on_RebootFinish = on_HostUp
 
-    def _modify_tree(self, rolename, behaviours, ip, modfn=None, replication_master=None):
+    def _modify_tree(self, rolename, behaviours, ip, modfn=None, replication_main=None):
         # Touch/Unlink %role_name%/xx.xx.xx.xx
         modfn(os.path.join(self._base_path, rolename, ip))
 
         for behaviour in behaviours:
             if behaviour == BuiltinBehaviours.MYSQL:
-                suffix = "master" if replication_master else "slave"
-                # Touch/Unlink mysql-(master|slave)/xx.xx.xx.xx
+                suffix = "main" if replication_main else "subordinate"
+                # Touch/Unlink mysql-(main|subordinate)/xx.xx.xx.xx
                 mysql_path = os.path.join(self._base_path, "mysql-" + suffix)
                 modfn(os.path.join(mysql_path, ip))
             else:
@@ -167,7 +167,7 @@ class IpListBuilder(Handler):
                 self._logger.error(x)
         self._remove_dir(os.path.dirname(f))
 
-    def _host_is_replication_master(self, ip, behaviour):
+    def _host_is_replication_main(self, ip, behaviour):
         try:
             received_roles = self._queryenv.list_roles(behaviour=behaviour)
         except:
@@ -177,5 +177,5 @@ class IpListBuilder(Handler):
         for role in received_roles:
             for host in role.hosts:
                 if ip == host.internal_ip:
-                    return host.replication_master
+                    return host.replication_main
         return False
